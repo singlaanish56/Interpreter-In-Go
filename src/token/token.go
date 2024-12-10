@@ -6,6 +6,7 @@ const (
 	LET="let"
 
 	//literals
+	VARIABLE="VAR"
 	STRING="STR"
 	NUMBER="INT"
 	TRUE="T"
@@ -25,16 +26,21 @@ const (
 	COLON=":"
 	EQUALTO="="
 	UNDERSCORE="_"
-
+	PLUS="+"
+	COMMA=","
 
 	//illegal
 	INV="INVALID"
 	EOF="EOF"
 )
 
-var keywordMap = map[string]TokenType{
+var KeywordMap = map[string]TokenType{
 	"fn":FUNCTION,
 	"let":LET,
+	"true":TRUE,
+	"false":FALSE,
+	"null":NULL,
+	"var":VARIABLE,
 }
 
 type TokenType string
@@ -44,6 +50,6 @@ type TokenType string
 type Token struct {
 	Type          TokenType
 	Identifier    string
-	startPosition int
-	endPosition   int
+	StartPosition int
+	EndPosition   int
 }
