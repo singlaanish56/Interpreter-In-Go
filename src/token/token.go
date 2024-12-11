@@ -4,6 +4,9 @@ const (
 	//keyword
 	FUNCTION="fn"
 	LET="let"
+	IF="if"
+	ELSE="else"
+	RETURN="return"
 
 	//literals
 	VARIABLE="VAR"
@@ -20,7 +23,9 @@ const (
 	CCURLYBR="}"
 	OSQAUREBR="["
 	CSQUAREBR="]"
-
+	OANGLEDBR="<"
+	CANGLEDBR=">"
+	
 	//signs
 	SEMICOLON=";"
 	COLON=":"
@@ -28,6 +33,12 @@ const (
 	UNDERSCORE="_"
 	PLUS="+"
 	COMMA=","
+	DOUBLEEQUALTO="=="
+	EXCLAMATION="!"
+	EXCLAMATIONEQUALTO="!="
+	MINUS="-"
+	DIVIDE="/"
+	MULTIPLY="*"
 
 	//illegal
 	INV="INVALID"
@@ -41,6 +52,9 @@ var KeywordMap = map[string]TokenType{
 	"false":FALSE,
 	"null":NULL,
 	"var":VARIABLE,
+	"if":IF,
+	"else":ELSE,
+	"return":RETURN,
 }
 
 type TokenType string

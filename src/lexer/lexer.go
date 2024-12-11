@@ -18,6 +18,14 @@ func New(input string) *Lexer {
 	return lexer
 }
 
+func (lexer *Lexer) peekChar() rune{
+	if lexer.currentPostion >= len(lexer.input){
+		return 0
+	}
+
+	return lexer.input[lexer.nextReadPosition]
+}
+
 func (lexer *Lexer) nextChar() {
 	if lexer.nextReadPosition >= len(lexer.input) {
 		lexer.char = 0
@@ -92,7 +100,16 @@ func (lexer *Lexer) GetToken() token.Token{
 	var tk token.Token
 	switch lexer.char{
 	case '=':
-		tk = token.Token{Type: token.EQUALTO, Identifier: string(lexer.char), StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+		str:= string(lexer.char)
+		
+		if lexer.peekChar() == '='{
+			lexer.nextChar()
+			str+=string(lexer.char)	
+			tk = token.Token{Type: token.DOUBLEEQUALTO, Identifier: str, StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+
+		}else{
+			tk = token.Token{Type: token.EQUALTO, Identifier: str, StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+		}
 	case '_':
 		tk = token.Token{Type: token.UNDERSCORE, Identifier: string(lexer.char), StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
 	case ';':
@@ -115,6 +132,27 @@ func (lexer *Lexer) GetToken() token.Token{
 		tk = token.Token{Type: token.PLUS, Identifier: string(lexer.char), StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
 	case ',':
 		tk = token.Token{Type: token.COMMA, Identifier: string(lexer.char), StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+	case '!':
+		str:= string(lexer.char)
+		
+		if lexer.peekChar() == '='{
+			lexer.nextChar()
+			str+=string(lexer.char)	
+			tk = token.Token{Type: token.EXCLAMATIONEQUALTO, Identifier: str, StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+
+		}else{
+			tk = token.Token{Type: token.EXCLAMATION, Identifier: str, StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+		}
+	case '-':
+		tk = token.Token{Type: token.MINUS, Identifier: string(lexer.char), StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+	case '/':
+		tk = token.Token{Type: token.DIVIDE, Identifier: string(lexer.char), StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+	case '*':
+		tk = token.Token{Type: token.MULTIPLY, Identifier: string(lexer.char), StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+	case '<':
+		tk = token.Token{Type: token.OANGLEDBR, Identifier: string(lexer.char), StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
+	case '>':
+		tk = token.Token{Type: token.CANGLEDBR, Identifier: string(lexer.char), StartPosition: lexer.currentPostion, EndPosition: lexer.currentPostion+1}
 	default:
 	
 		if lexer.char==0{

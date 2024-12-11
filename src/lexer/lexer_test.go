@@ -9,7 +9,7 @@ import (
 
 func TestNextToken(t *testing.T){
 
-	input := `let five=5;let ten=10;let add = fn(x,y){x+y;}let str = "this is a string";`
+	input := `let five=5;let ten=10;let add = fn(x,y){x+y;}let str = "this is a string";!-/*5;5<10>5; if(5<10){return true;}else{return false;}10==10;10!=9;`
 
 	tests:=[]struct{
 		expectedType token.TokenType
@@ -44,6 +44,43 @@ func TestNextToken(t *testing.T){
 		{token.VARIABLE, "str"},
 		{token.EQUALTO, "="},
 		{token.STRING, "this is a string"},
+		{token.SEMICOLON, ";"},
+		{token.EXCLAMATION, "!"},
+		{token.MINUS, "-"},
+		{token.DIVIDE, "/"},
+		{token.MULTIPLY, "*"},
+		{token.NUMBER, "5"},
+		{token.SEMICOLON, ";"},
+		{token.NUMBER, "5"},
+		{token.OANGLEDBR, "<"},
+		{token.NUMBER, "10"},
+		{token.CANGLEDBR, ">"},
+		{token.NUMBER, "5"},
+		{token.SEMICOLON, ";"},
+		{token.IF, "if"},
+		{token.OROUNDBR, "("},
+		{token.NUMBER, "5"},
+		{token.OANGLEDBR, "<"},
+		{token.NUMBER, "10"},
+		{token.CROUNDBR, ")"},
+		{token.OCURLYBR, "{"},
+		{token.RETURN, "return"},
+		{token.TRUE, "true"},
+		{token.SEMICOLON, ";"},
+		{token.CCURLYBR, "}"},
+		{token.ELSE, "else"},
+		{token.OCURLYBR, "{"},
+		{token.RETURN, "return"},
+		{token.FALSE, "false"},
+		{token.SEMICOLON, ";"},
+		{token.CCURLYBR, "}"},
+		{token.NUMBER, "10"},
+		{token.DOUBLEEQUALTO, "=="},
+		{token.NUMBER, "10"},
+		{token.SEMICOLON, ";"},
+		{token.NUMBER, "10"},
+		{token.EXCLAMATIONEQUALTO, "!="},
+		{token.NUMBER, "9"},
 		{token.SEMICOLON, ";"},
 		{token.EOF, ""},
 	}
