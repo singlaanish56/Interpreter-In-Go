@@ -41,7 +41,7 @@ func (lexer *Lexer) GetToken() token.Token{
 	
 
 	//white space
-	if (lexer.char==' ' || lexer.char=='\t' || lexer.char=='\n' || lexer.char=='\r'){
+	for isEsapceSequence(lexer.char){
 		lexer.nextChar()
 	}
 
@@ -61,16 +61,21 @@ func (lexer *Lexer) GetToken() token.Token{
 	if(lexer.char=='"'){
 		
 		start := lexer.currentPostion+1
-
+		var strBuilder []rune
 		for{
 			lexer.nextChar()
 
 			if(lexer.char=='"' || lexer.char==0){
 				break;
 			}
+			if lexer.char == '\n' || lexer.char == '\r' || lexer.char == '\t'{
+				continue
+			}
+
+			strBuilder=append(strBuilder, lexer.char)
 		}
 
-		str := string(lexer.input[start:lexer.currentPostion])
+		str := string(strBuilder)
 		endIndex := lexer.currentPostion
 		lexer.nextChar()
 		return token.Token{Type:token.STRING, Identifier: str, StartPosition: start, EndPosition: endIndex}
@@ -168,3 +173,7 @@ func (lexer *Lexer) GetToken() token.Token{
 
 }
 
+
+func isEsapceSequence(currentChar rune) bool{
+	return currentChar==' ' || currentChar=='\n' || currentChar=='\t' || currentChar=='\r'
+}
