@@ -54,3 +54,13 @@ type Variable struct{
 
 func (variable *Variable) expressionNode() {}
 func (variable *Variable) TokenLiteral() string {return variable.Token.Identifier}
+
+
+
+type ReturnStatement struct{
+	Token token.Token
+	ReturnValue  Expression
+}
+
+func (rs *ReturnStatement) statementNode() {}
+func (rs *ReturnStatement) TokenLiteral() string {return rs.Token.Identifier}
