@@ -82,7 +82,40 @@ func TestReturnStatements(t *testing.T){
 }
 
 
+func TestVariableExpression(t *testing.T){
+	input := "anish"
 
+	l := lexer.New(input)
+	p := New(l)
+
+	prog := p.ParseProgram()
+
+	checkForErrors(p,t)
+
+	if len(prog.Statements) != 1{
+		t.Fatalf("the program has not enough statements")
+	}
+
+
+	st, ok := prog.Statements[0].(*ast.ExpressionStatement)
+	if !ok{
+		t.Fatalf("the first statement of not type expression, got %T", prog.Statements[0])
+	}
+
+	varr, ok := st.Expression.(*ast.Variable)
+	if !ok{
+		t.Fatalf("the first statement of not type variable, got %T", st.Expression)
+	}
+
+	if varr.Value != "anish"{
+		t.Errorf("the variable value not as expected %s, got %s","anish",varr.Value)
+	}
+
+	if varr.TokenLiteral()!="anish"{
+		t.Errorf("the variable tokenliteral not as expected %s, got %s","anish",varr.TokenLiteral())
+	}
+
+}
 
 
 

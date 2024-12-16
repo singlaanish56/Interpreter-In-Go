@@ -8,7 +8,11 @@ import (
 	"github.com/singlaanish56/Interpreter-In-Go/token"
 )
 
-
+//pratt parser says that every token would have two functions to choose from prefix/postfix and infix
+type (
+	prefixParseFn  func() ast.Expression
+	infixParseFn func(ast.Expression) ast.Expression // the argument for the left operator
+)
 
 
 type Parser struct{
@@ -16,6 +20,9 @@ type Parser struct{
 	peekToken  token.Token
 	errorList  []error
 	lexer *lexer.Lexer
+
+	prefixParseFnMap  map[token.TokenType]prefixParseFn
+	infixParseFnMap map[token.TokenType]infixParseFn
 }
 
 func New(lx *lexer.Lexer) *Parser{
@@ -24,6 +31,8 @@ func New(lx *lexer.Lexer) *Parser{
 	parser.nextToken()
 	parser.nextToken()
 
+	parser.prefixParseFnMap = make(map[token.TokenType]prefixParseFn)
+	parser.addPrefix(token.VARIABLE, parser.parseVariable)
 	return parser
 }
 
@@ -61,10 +70,21 @@ func (parser *Parser) parseStatement() ast.Statement{
 	case token.RETURN:
 		return parser.parseReturnStatement()
 	default:
-		return nil
+		return parser.parseExpressionStatment()
 	}
 }
 
+func (parser *Parser) parseExpressionStatment() *ast.ExpressionStatement{
+	st := &ast.ExpressionStatement{Token: parser.currToken}
+
+	st.Expression = parser.parseExpression(LOWEST)
+
+	if parser.peekTokenIs(token.SEMICOLON){
+		parser.nextToken()
+	}
+
+	return st
+}
 
 func (parser *Parser) parseLetStatement() *ast.LetStatement{
 
@@ -98,6 +118,21 @@ func (parser *Parser) parseReturnStatement() *ast.ReturnStatement{
 }
 
 
+func (parser *Parser) parseExpression(precendence int) ast.Expression{
+	prefix := parser.prefixParseFnMap[parser.currToken.Type]
+
+	if prefix ==nil{
+		return nil
+	}
+
+	leftExp := prefix()
+	return leftExp
+}
+
+func (parser *Parser) parseVariable() ast.Expression{
+	return &ast.Variable{Token: parser.currToken, Value: parser.currToken.Identifier}
+}
+
 //helpers
 func (parser *Parser) checkPeekToken(tokenType token.TokenType) bool{
 	if parser.peekTokenIs(tokenType){
@@ -121,3 +156,22 @@ func (parser *Parser) peekTokenIs(tokenType token.TokenType) bool{
 func (parser *Parser) currTokenIs(tokenType token.TokenType) bool{
 	return parser.currToken.Type == tokenType
 }
+
+func (parser *Parser) addPrefix(tokenType token.TokenType, fn prefixParseFn){
+	parser.prefixParseFnMap[tokenType]=fn
+}
+
+func (parser *Parser) addInfix(tokenType token.TokenType, fn infixParseFn){
+	parser.infixParseFnMap[tokenType]=fn
+}
+
+const (
+	_ int = iota
+	LOWEST
+	EQUALS
+	LESSGREATER
+	SUM
+	PRODUCT
+	PREFIX
+	CALL
+)		
