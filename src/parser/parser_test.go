@@ -1,10 +1,11 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/singlaanish56/Interpreter-In-Go/lexer"
 	"github.com/singlaanish56/Interpreter-In-Go/ast"
+	"github.com/singlaanish56/Interpreter-In-Go/lexer"
 )
 
 func TestLetStatements(t *testing.T){
@@ -117,6 +118,76 @@ func TestVariableExpression(t *testing.T){
 
 }
 
+func TestIntegerExpression(t *testing.T){
+	input := "5;"
+
+	l := lexer.New(input)
+	p := New(l)
+
+	prog := p.ParseProgram()
+
+	checkForErrors(p,t)
+
+	if len(prog.Statements) != 1{
+		t.Fatalf("the program has not enough statements")
+	}
+
+
+	st, ok := prog.Statements[0].(*ast.ExpressionStatement)
+	if !ok{
+		t.Fatalf("the first statement of not type expression, got %T", prog.Statements[0])
+	}
+
+	varr, ok := st.Expression.(*ast.IntegerLiteral)
+	if !ok{
+		t.Fatalf("the first statement of not type integer, got %T", st.Expression)
+	}
+
+	if varr.Value != 5{
+		t.Errorf("the variable value not as expected %d, got %d",5,varr.Value)
+	}
+
+	if varr.TokenLiteral()!="5"{
+		t.Errorf("the variable tokenliteral not as expected %s, got %s","5",varr.TokenLiteral())
+	}
+
+}
+
+func TestPrefixExpression(t *testing.T){
+	prefixTests :=[]struct{
+		Input string
+		Operator string
+		Number int64
+	}{
+		{"!5;","!",5},
+		{"-10","-",10},
+	}
+
+	for _, tt := range prefixTests{
+		l := lexer.New(tt.Input)
+		p := New(l)
+		prog := p.ParseProgram()
+		checkForErrors(p,t)
+		if len(prog.Statements) != 1{
+			t.Fatalf("the program has not enough statements")
+		}
+		st, ok := prog.Statements[0].(*ast.ExpressionStatement)
+		if !ok{
+		t.Fatalf("the first statement of not type expression, got %T", prog.Statements[0])
+		}
+		varr, ok := st.Expression.(*ast.PrefixExpression)
+		if !ok{
+			t.Fatalf("the first statement of not type prefix, got %T", st.Expression)
+		}
+		if varr.Operator != tt.Operator{
+			t.Fatalf("the operator is not expected %s, got %s", tt.Operator, varr.Operator)
+		}
+		if testIntegerLiteral(t, varr.RightOperator, tt.Number){
+			return
+		}
+	}
+
+}
 
 
 //helpers
@@ -144,6 +215,28 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool{
 	
 	return true
 	}
+
+
+func testIntegerLiteral(t *testing.T, ro  ast.Expression, expected int64) bool{
+	num , ok := ro.(*ast.IntegerLiteral)
+	if !ok{
+		t.Errorf("the integer type literal not found , got %T", ro)
+		return false
+	}
+
+	if num.Value != expected{
+		t.Errorf("the integer value not expected %d , got %d", expected, num.Value)
+		return false	
+	}
+
+
+	if num.TokenLiteral()!=fmt.Sprintf("%d", expected){
+		t.Errorf("the integer tokenLiteral not expected %d , got %s",expected, num.TokenLiteral(), )
+		return false
+	}
+
+	return true
+}
 
 func checkForErrors(parser *Parser, t *testing.T){
 	errors := parser.Errors()

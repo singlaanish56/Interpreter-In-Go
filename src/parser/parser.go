@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/singlaanish56/Interpreter-In-Go/ast"
 	"github.com/singlaanish56/Interpreter-In-Go/lexer"
@@ -33,6 +34,9 @@ func New(lx *lexer.Lexer) *Parser{
 
 	parser.prefixParseFnMap = make(map[token.TokenType]prefixParseFn)
 	parser.addPrefix(token.VARIABLE, parser.parseVariable)
+	parser.addPrefix(token.NUMBER, parser.parserIntegerLiteral)
+	parser.addPrefix(token.EXCLAMATION, parser.parsePrefixExpression)
+	parser.addPrefix(token.MINUS, parser.parsePrefixExpression)
 	return parser
 }
 
@@ -122,6 +126,7 @@ func (parser *Parser) parseExpression(precendence int) ast.Expression{
 	prefix := parser.prefixParseFnMap[parser.currToken.Type]
 
 	if prefix ==nil{
+		parser.noExpressionfoundError(parser.currToken.Type)
 		return nil
 	}
 
@@ -131,6 +136,28 @@ func (parser *Parser) parseExpression(precendence int) ast.Expression{
 
 func (parser *Parser) parseVariable() ast.Expression{
 	return &ast.Variable{Token: parser.currToken, Value: parser.currToken.Identifier}
+}
+
+func (parser *Parser) parserIntegerLiteral() ast.Expression{
+	intLiteral := &ast.IntegerLiteral{Token: parser.currToken}
+
+	val, err := strconv.ParseInt(parser.currToken.Identifier, 0 , 64)
+	if err !=nil{
+		parser.errorList = append(parser.errorList, fmt.Errorf("could not parser the integer %q", parser.currToken.Identifier))
+	}
+
+	intLiteral.Value = val
+	return intLiteral
+}
+
+func (parser *Parser) parsePrefixExpression() ast.Expression{
+	exp := &ast.PrefixExpression{Token: parser.currToken, Operator: parser.currToken.Identifier}
+
+	parser.nextToken()
+
+	exp.RightOperator = parser.parseExpression(PREFIX)
+
+	return exp
 }
 
 //helpers
@@ -163,6 +190,10 @@ func (parser *Parser) addPrefix(tokenType token.TokenType, fn prefixParseFn){
 
 func (parser *Parser) addInfix(tokenType token.TokenType, fn infixParseFn){
 	parser.infixParseFnMap[tokenType]=fn
+}
+
+func (parser *Parser) noExpressionfoundError(tokenType token.TokenType){
+ parser.errorList = append(parser.errorList, fmt.Errorf("no matching func found for the token %s" ,tokenType))
 }
 
 const (
