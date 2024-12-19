@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+
 	"strconv"
 
 	"github.com/singlaanish56/Interpreter-In-Go/ast"
@@ -33,10 +34,24 @@ func New(lx *lexer.Lexer) *Parser{
 	parser.nextToken()
 
 	parser.prefixParseFnMap = make(map[token.TokenType]prefixParseFn)
+	parser.infixParseFnMap = make(map[token.TokenType]infixParseFn)
 	parser.addPrefix(token.VARIABLE, parser.parseVariable)
 	parser.addPrefix(token.NUMBER, parser.parserIntegerLiteral)
 	parser.addPrefix(token.EXCLAMATION, parser.parsePrefixExpression)
 	parser.addPrefix(token.MINUS, parser.parsePrefixExpression)
+	parser.addPrefix(token.PLUS, parser.parsePrefixExpression)
+	parser.addPrefix(token.TRUE, parser.parseBooleanExpression)
+	parser.addPrefix(token.FALSE, parser.parseBooleanExpression)
+
+
+	parser.addInfix(token.PLUS, parser.parseInfixExpression)
+	parser.addInfix(token.MINUS, parser.parseInfixExpression)
+	parser.addInfix(token.MULTIPLY, parser.parseInfixExpression)
+	parser.addInfix(token.DIVIDE, parser.parseInfixExpression)
+	parser.addInfix(token.OANGLEDBR, parser.parseInfixExpression)
+	parser.addInfix(token.CANGLEDBR, parser.parseInfixExpression)
+	parser.addInfix(token.DOUBLEEQUALTO, parser.parseInfixExpression)
+	parser.addInfix(token.EXCLAMATIONEQUALTO, parser.parseInfixExpression)
 	return parser
 }
 
@@ -131,6 +146,17 @@ func (parser *Parser) parseExpression(precendence int) ast.Expression{
 	}
 
 	leftExp := prefix()
+	
+	for !parser.peekTokenIs(token.SEMICOLON) && precendence < parser.peekPrecedence(){
+		infix := parser.infixParseFnMap[parser.peekToken.Type]
+		if infix == nil {
+			return leftExp
+		}
+
+		parser.nextToken()
+
+		leftExp = infix(leftExp)
+	}
 	return leftExp
 }
 
@@ -150,6 +176,10 @@ func (parser *Parser) parserIntegerLiteral() ast.Expression{
 	return intLiteral
 }
 
+func (parser *Parser) parseBooleanExpression() ast.Expression{
+	return &ast.BooleanLiteral{Token: parser.currToken, Value: parser.currTokenIs(token.TRUE)}
+}
+
 func (parser *Parser) parsePrefixExpression() ast.Expression{
 	exp := &ast.PrefixExpression{Token: parser.currToken, Operator: parser.currToken.Identifier}
 
@@ -160,6 +190,22 @@ func (parser *Parser) parsePrefixExpression() ast.Expression{
 	return exp
 }
 
+func(parser *Parser) parseInfixExpression(left ast.Expression) ast.Expression{
+	exp := &ast.InfixExpression{
+		Token: parser.currToken,
+		Operator: parser.currToken.Identifier,
+		LeftOperator: left,
+	}
+
+	//why to store the precendence?, this is to tell the next infix operator who owns, lets the left operator was +, but the next is *, so * would own it and vice versa
+
+	precendence := parser.currPrecedence()
+	parser.nextToken()
+	exp.RightOperator = parser.parseExpression(precendence)
+
+	return exp
+
+}
 //helpers
 func (parser *Parser) checkPeekToken(tokenType token.TokenType) bool{
 	if parser.peekTokenIs(tokenType){
@@ -194,6 +240,34 @@ func (parser *Parser) addInfix(tokenType token.TokenType, fn infixParseFn){
 
 func (parser *Parser) noExpressionfoundError(tokenType token.TokenType){
  parser.errorList = append(parser.errorList, fmt.Errorf("no matching func found for the token %s" ,tokenType))
+}
+
+func (parser *Parser) peekPrecedence() int{
+	if pr, ok := precendences[parser.peekToken.Type]; ok{
+		return pr 
+	}
+
+	return LOWEST
+}
+
+func (parser *Parser) currPrecedence() int{
+	if cr, ok := precendences[parser.currToken.Type]; ok{
+		return cr 
+	}
+
+
+	return LOWEST
+}
+
+var precendences = map[token.TokenType] int{
+	token.DOUBLEEQUALTO: EQUALS,
+	token.EXCLAMATIONEQUALTO : EQUALS,
+	token.OANGLEDBR: LESSGREATER,
+	token.CANGLEDBR: LESSGREATER,
+	token.PLUS: SUM,
+	token.MINUS: SUM,
+	token.MULTIPLY: PRODUCT,
+	token.DIVIDE: PRODUCT,
 }
 
 const (
