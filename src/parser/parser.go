@@ -40,9 +40,16 @@ func New(lx *lexer.Lexer) *Parser{
 	parser.addPrefix(token.EXCLAMATION, parser.parsePrefixExpression)
 	parser.addPrefix(token.MINUS, parser.parsePrefixExpression)
 	parser.addPrefix(token.PLUS, parser.parsePrefixExpression)
+
+	parser.addPrefix(token.OROUNDBR, parser.parseGroupedExpression)
+	parser.addPrefix(token.CROUNDBR, parser.parseGroupedExpression)
+
 	parser.addPrefix(token.TRUE, parser.parseBooleanExpression)
 	parser.addPrefix(token.FALSE, parser.parseBooleanExpression)
 
+	parser.addPrefix(token.IF, parser.parseIfExpression)
+
+	parser.addPrefix(token.FUNCTION, parser.parseFunctionExpression)
 
 	parser.addInfix(token.PLUS, parser.parseInfixExpression)
 	parser.addInfix(token.MINUS, parser.parseInfixExpression)
@@ -136,7 +143,6 @@ func (parser *Parser) parseReturnStatement() *ast.ReturnStatement{
 	return st
 }
 
-
 func (parser *Parser) parseExpression(precendence int) ast.Expression{
 	prefix := parser.prefixParseFnMap[parser.currToken.Type]
 
@@ -178,6 +184,119 @@ func (parser *Parser) parserIntegerLiteral() ast.Expression{
 
 func (parser *Parser) parseBooleanExpression() ast.Expression{
 	return &ast.BooleanLiteral{Token: parser.currToken, Value: parser.currTokenIs(token.TRUE)}
+}
+
+func (parser *Parser) parseGroupedExpression() ast.Expression{
+	parser.nextToken()
+
+	exp := parser.parseExpression(LOWEST)
+
+	if !parser.checkPeekToken(token.CROUNDBR){
+		return nil
+	}
+
+	return exp
+}
+
+func (parser *Parser) parseIfExpression() ast.Expression{
+	exp := &ast.IfExpression{Token: parser.currToken}
+
+	if !parser.checkPeekToken(token.OROUNDBR){
+		return nil
+	}
+
+	parser.nextToken()
+	exp.Condition = parser.parseExpression(LOWEST)
+
+	if !parser.checkPeekToken(token.CROUNDBR){
+		return nil
+	}
+
+	if !parser.checkPeekToken(token.OCURLYBR){
+		return nil
+	}
+
+	exp.Consequence = parser.parseBlockStatement()
+
+	if parser.peekTokenIs(token.ELSE){
+		parser.nextToken()
+
+		if !parser.checkPeekToken(token.OCURLYBR){
+			return nil
+		}
+
+		exp.Alternative = parser.parseBlockStatement()
+	}
+
+
+	return exp
+}
+
+func (parser *Parser) parseFunctionExpression() ast.Expression{
+	fnexp := &ast.FunctionExpression{Token :parser.currToken}
+
+	if !parser.checkPeekToken(token.OROUNDBR){
+		return nil
+	}
+
+	fnexp.Parameters = parser.parseFunctionArguments()
+
+	if !parser.checkPeekToken(token.OCURLYBR){
+		return nil
+	}
+
+	fnexp.Body = parser.parseBlockStatement()
+
+	return fnexp
+}
+
+func (parser *Parser) parseFunctionArguments() []*ast.Variable{
+
+	params := []*ast.Variable{}
+
+	if parser.peekTokenIs(token.CROUNDBR){
+		parser.nextToken()
+		return params
+	}
+
+	parser.nextToken()
+
+	arg := &ast.Variable{Token: parser.currToken, Value: parser.currToken.Identifier}
+	params = append(params, arg)
+
+	for parser.peekTokenIs(token.COMMA){
+		parser.nextToken()
+		parser.nextToken()
+
+		arg = &ast.Variable{Token: parser.currToken, Value: parser.currToken.Identifier}
+		params = append(params, arg)
+	}
+
+	if !parser.checkPeekToken(token.CROUNDBR){
+		return nil
+	}
+
+	return params
+
+}
+
+func (parser *Parser) parseBlockStatement() *ast.BlockStatement{
+
+	bexp := &ast.BlockStatement{Token: parser.currToken}
+	bexp.Statements = []ast.Statement{}
+
+	
+	parser.nextToken()
+
+	for !parser.currTokenIs(token.CCURLYBR) && !parser.currTokenIs(token.EOF){
+		st := parser.parseStatement()
+		if st != nil{
+			bexp.Statements = append(bexp.Statements, st)
+		}
+		parser.nextToken()
+	}
+
+	return bexp
 }
 
 func (parser *Parser) parsePrefixExpression() ast.Expression{

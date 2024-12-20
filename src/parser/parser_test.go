@@ -266,6 +266,9 @@ func TestOPeratorPrecendenceParsing(t *testing.T){
 		{"false","false"},
 		{"3>5 == false","((3>5)==false)"},
 		{"3<5 != true","((3<5)!=true)"},
+		{"a*(b*c)","(a*(b*c))"},
+		{"(a+b)/c","((a+b)/c)"},
+		
 	}
 
 	for _, tt:= range tests{
@@ -282,6 +285,157 @@ func TestOPeratorPrecendenceParsing(t *testing.T){
 	}
 }
 
+func TestIfElseExpression(t *testing.T){
+	tests := []struct{
+		input string
+	}{
+		{"if(x<y){x}"},
+		{"if(x<y){x}else{y}"},
+	}
+
+	for _, tt := range tests{
+		l := lexer.New(tt.input)
+		p := New(l)
+		prog := p.ParseProgram()
+		checkForErrors(p,t)
+
+		if len(prog.Statements) != 1{
+			t.Fatalf("the program has not enough statements")
+			return
+		}
+
+		st , ok := prog.Statements[0].(*ast.ExpressionStatement)
+		if !ok{
+			t.Errorf("the program statement is not of the expected type, got=%T",prog.Statements[0])
+			return
+		}
+
+		exp, ok := st.Expression.(*ast.IfExpression)
+		if !ok{
+			t.Errorf("expected the if expression , got=%T", st.Expression)
+			return 
+		}
+
+		if !testInfix(t, exp.Condition, "x", "<", "y"){
+			return 
+		}
+
+		if len(exp.Consequence.Statements) != 1{
+			t.Fatalf("the consequence has not enough statements")
+			return 
+		}
+
+		con, ok := exp.Consequence.Statements[0].(*ast.ExpressionStatement)
+		if !ok{
+			t.Errorf("the consquence for the if doesnt hav the expected type got=%T", con)
+			return 
+		}
+
+		if !testIdentifier(t, con.Expression, "x"){
+			return
+		}
+
+		if exp.Alternative != nil{
+			if len(exp.Alternative.Statements) != 1{
+				t.Fatalf("the consequence has not enough statements")
+				return 
+			}
+	
+			alt, ok := exp.Alternative.Statements[0].(*ast.ExpressionStatement)
+			if !ok{
+				t.Errorf("the consquence for the if doesnt hav the expected type got=%T", exp.Alternative.Statements[0])
+				return 
+			}
+	
+			if !testIdentifier(t, alt.Expression, "y"){
+				return
+			}
+		}
+
+
+	}
+}
+
+func TestFuncExpression(t *testing.T){
+
+	input := `fn(x, y){x+y;}`
+
+	l := lexer.New(input)
+	p := New(l)
+	prog := p.ParseProgram()
+	checkForErrors(p,t)
+
+	if len(prog.Statements) !=1{
+		t.Errorf("the number of statements not as expected")
+		return 
+	}
+
+	st, ok := prog.Statements[0].(*ast.ExpressionStatement)
+	if !ok{
+		t.Errorf("the expression  type not as expected got=%T", prog.Statements[0])
+		return 
+	}
+
+	fst, ok := st.Expression.(*ast.FunctionExpression)
+	if !ok{
+		t.Errorf("the type expected is function literal got=%T", st.Expression)
+		return
+	}
+
+	testLiteral(t, fst.Parameters[0],"x")
+	testLiteral(t, fst.Parameters[1],"y")
+
+	if !testIdentifier(t, fst.Parameters[1], "y"){
+		return
+	}
+
+	if len(fst.Body.Statements) !=1{
+		t.Errorf("the number of statement in the function body not as expected , got=%d",len(fst.Body.Statements))
+		return
+	}
+
+	body, ok := fst.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok{
+		t.Errorf("expected as expression got something else, got=%T", fst.Body.Statements[0])
+		return
+	}
+
+	testInfix(t, body.Expression, "x","+","y")
+}
+
+func TestFunctionParameters(t *testing.T){
+	tests := []struct{
+		input string
+		expectedParams []string
+	}{
+		{"fn(){}", []string{}},
+		{"fn(x){}",[]string{"x"}},
+		{"fn(x,y,z){}",[]string{"x","y","z"}},
+	}
+
+	for _, tt := range tests{
+		l := lexer.New(tt.input)
+		p := New(l)
+		prog := p.ParseProgram()
+		checkForErrors(p,t)
+
+		if len(prog.Statements)!=1{
+			t.Errorf("the number of statements not as expected")
+			return 
+		}
+
+		st := prog.Statements[0].(*ast.ExpressionStatement)
+		fn := st.Expression.(*ast.FunctionExpression)
+
+		if len(fn.Parameters) != len(tt.expectedParams){
+			t.Errorf("the lemght pf the paranmeters not as expected=%d, got=%d",len(fn.Parameters),len(tt.expectedParams))
+		}
+
+		for i, arg := range fn.Parameters{
+			testLiteral(t, arg, tt.expectedParams[i])
+		}
+	}
+}
 //helpers
 func testIdentifier(t *testing.T, exp ast.Expression, value string)bool{
 	ident, ok := exp.(*ast.Variable)

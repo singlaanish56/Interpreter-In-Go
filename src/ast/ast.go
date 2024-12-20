@@ -2,6 +2,7 @@ package ast
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/singlaanish56/Interpreter-In-Go/token"
 )
@@ -45,6 +46,24 @@ func (astRootNode *ASTRootNode) String() string{
 
 	return out.String()
 }
+
+type BlockStatement struct{
+	Token token.Token
+	Statements []Statement
+}
+
+func (bs *BlockStatement) statementNode() {}
+func (bs *BlockStatement) TokenLiteral() string {return bs.Token.Identifier}
+func (bs *BlockStatement) String() string{
+	var out bytes.Buffer
+
+	for _,s := range bs.Statements{
+		out.WriteString(s.String())
+	}
+	return out.String()
+}
+
+
 
 type LetStatement struct{
 	Token       token.Token
@@ -132,6 +151,56 @@ type BooleanLiteral struct{
 func (bl *BooleanLiteral) expressionNode(){}
 func (bl *BooleanLiteral) TokenLiteral() string {return bl.Token.Identifier}
 func (bl *BooleanLiteral) String() string {return bl.Token.Identifier}
+
+type IfExpression struct{
+	Token token.Token
+	Condition Expression
+	Consequence *BlockStatement
+	Alternative *BlockStatement
+}
+
+func (ie *IfExpression) expressionNode(){}
+func (ie *IfExpression) TokenLiteral() string{return ie.Token.Identifier}
+func (ie *IfExpression) String() string{
+	var out bytes.Buffer
+
+	out.WriteString("if")
+	out.WriteString(ie.Condition.String())
+	out.WriteString(ie.Consequence.String())
+	
+	if ie.Alternative != nil{
+		out.WriteString("else")
+		out.WriteString(ie.Alternative.String())
+	}
+
+	return out.String()
+}
+
+type FunctionExpression struct{
+	Token token.Token
+	Parameters []*Variable
+	Body *BlockStatement
+}
+
+func (fe *FunctionExpression) expressionNode(){}
+func (fe *FunctionExpression) TokenLiteral() string{return fe.Token.Identifier}
+func (fe *FunctionExpression) String() string{
+	var out bytes.Buffer
+
+	params := []string{}
+	for _, p := range fe.Parameters{
+		params = append(params, p.String())
+	}
+
+
+	out.WriteString("if")
+	out.WriteString("(")
+	out.WriteString(strings.Join(params,","))
+	out.WriteString(")")
+	out.WriteString(fe.Body.String())
+
+	return out.String()
+}
 
 
 type PrefixExpression struct{
