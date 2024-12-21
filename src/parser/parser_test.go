@@ -6,79 +6,74 @@ import (
 
 	"github.com/singlaanish56/Interpreter-In-Go/ast"
 	"github.com/singlaanish56/Interpreter-In-Go/lexer"
+	
 )
 
 func TestLetStatements(t *testing.T){
-
-	input :=`
-	let x=5;
-	let y=10;
-	let foobar=838383838;
-	`
-
-	l := lexer.New(input)
-	p := New(l)
-
-	prog := p.ParseProgram()
-	checkForErrors(p, t)
-	if prog == nil{
-		t.Fatalf("parseprogram() returned nil")
-	} 
-
-	if len(prog.Statements) != 3{
-		t.Fatalf("some of the statments are missing, got %d \n", len(prog.Statements))
-	}
-
 	tests := []struct{
-		expectedIdentifier string
+		input string
+		expectedVariable string
+		expectedValue interface{}
 	}{
-		{"x"},
-		{"y"},
-		{"foobar"},
+		{"let x=5;","x", 5},
+		{"let y = true;","y", true},
+		{"let foobar = y;","foobar","y"},
 	}
 
+	for _, tt := range tests{
+		l := lexer.New(tt.input)
+		p := New(l)
+		prog := p.ParseProgram()
+		checkForErrors(p,t)
 
-	for i, tt:= range tests{
-		st := prog.Statements[i]
-		if !testLetStatement(t, st, tt.expectedIdentifier){
-			return 
+		if len(prog.Statements) != 1{
+			t.Fatalf("the program has not enough statements")
+		}
+	
+	
+		st := prog.Statements[0]
+	
+		if !testLetStatement(t, st, tt.expectedVariable){
+			return
 		}
 
+		val := st.(*ast.LetStatement).Value
+
+		if !testLiteral(t, val, tt.expectedValue){
+			return
+		}
 	}
+
 }
 
 func TestReturnStatements(t *testing.T){
-	
-	input :=`
-		return 5;
-		return y;
-		return add(5,10);
-	`
-
-	l := lexer.New(input)
-	p := New(l)
-
-	prog := p.ParseProgram()
-	checkForErrors(p, t)
-	if prog == nil{
-		t.Fatalf("parseprogram() returned nil")
-	} 
-
-	if len(prog.Statements) != 3{
-		t.Fatalf("some of the statments are missing, got %d \n", len(prog.Statements))
+	tests := []struct{
+		input string
+		expectedValue interface{}
+	}{
+		{"return 5;", 5},
+		{"return true;",true},
+		{"return foobar;","foobar"},
 	}
 
-	for _, returnsts:= range prog.Statements{
-		st, ok := returnsts.(*ast.ReturnStatement)
-		if !ok{
-			t.Errorf("st not of type Return , got=%T", returnsts)
+	for _, tt := range tests{
+		l := lexer.New(tt.input)
+		p := New(l)
+		prog := p.ParseProgram()
+		checkForErrors(p,t)
+
+		if len(prog.Statements) != 1{
+			t.Fatalf("the program has not enough statements")
 		}
+	
+	
+		st := prog.Statements[0]
+	
+		val := st.(*ast.ReturnStatement).ReturnValue
 
-		if st.TokenLiteral() != "return"{
-			t.Errorf("token liternal not return , got=%s", st.TokenLiteral())
+		if !testLiteral(t, val, tt.expectedValue){
+			return
 		}
-
-
 	}
 }
 
@@ -268,6 +263,8 @@ func TestOPeratorPrecendenceParsing(t *testing.T){
 		{"3<5 != true","((3<5)!=true)"},
 		{"a*(b*c)","(a*(b*c))"},
 		{"(a+b)/c","((a+b)/c)"},
+		{"a + add(b*c) +d", "((a+add((b*c)))+d)"},
+		{"add(a,b,1,2*3,4+5,add(6,7*8))","add(a,b,1,(2*3),(4+5),add(6,(7*8)))"},
 		
 	}
 
@@ -436,11 +433,52 @@ func TestFunctionParameters(t *testing.T){
 		}
 	}
 }
+
+func TestCallExpressions(t *testing.T){
+	input := `add(1, 2*3, 4+5)`
+
+	l := lexer.New(input)
+	p := New(l)
+	prog := p.ParseProgram()
+	checkForErrors(p,t)
+	
+	if len(prog.Statements)!=1{
+		t.Errorf("the number of statements not as expected")
+		return 
+	}
+
+	st , ok := prog.Statements[0].(*ast.ExpressionStatement)
+	if !ok{
+		t.Errorf("the expression  type not as expected got=%T", prog.Statements[0])
+		return 
+	}
+
+	exp , ok := st.Expression.(*ast.CallExpression)
+	if !ok{
+		t.Errorf("the expression  type not as expected got=%T", prog.Statements[0])
+		return 
+	}
+
+	if !testIdentifier(t, exp.Function, "add"){
+		return
+	} 
+
+	if len(exp.Arguments) != 3{
+		t.Errorf("the number of arg not as exprected 3, got=%d", len(exp.Arguments))
+		return
+	}
+
+	testLiteral(t, exp.Arguments[0], 1)
+	testInfix(t, exp.Arguments[1],2,"*",3)
+	testInfix(t, exp.Arguments[2],4,"+",5)
+}	
+
+
 //helpers
 func testIdentifier(t *testing.T, exp ast.Expression, value string)bool{
 	ident, ok := exp.(*ast.Variable)
 	if!ok{
-		t.Errorf("exp npt Variable, got=%T", exp)
+		t.Errorf("exp not Variable, got=%T", exp)
 		return false
 	}
 
@@ -551,7 +589,7 @@ func testIntegerLiteral(t *testing.T, ro  ast.Expression, expected int64) bool{
 	}
 
 	if num.Value != expected{
-		t.Errorf("the integer value not expected %d , got %d", expected, num.Value)
+		t.Errorf("the integer value not as expected %d , got %d", expected, num.Value)
 		return false	
 	}
 

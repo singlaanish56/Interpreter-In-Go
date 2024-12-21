@@ -59,6 +59,8 @@ func New(lx *lexer.Lexer) *Parser{
 	parser.addInfix(token.CANGLEDBR, parser.parseInfixExpression)
 	parser.addInfix(token.DOUBLEEQUALTO, parser.parseInfixExpression)
 	parser.addInfix(token.EXCLAMATIONEQUALTO, parser.parseInfixExpression)
+	
+	parser.addInfix(token.OROUNDBR, parser.parseCallExpression)
 	return parser
 }
 
@@ -126,7 +128,11 @@ func (parser *Parser) parseLetStatement() *ast.LetStatement{
 		return nil
 	}
 
-	for !parser.currTokenIs(token.SEMICOLON){
+	parser.nextToken()
+
+	st.Value = parser.parseExpression(LOWEST)
+
+	if parser.peekTokenIs(token.SEMICOLON){
 		parser.nextToken()
 	}
 
@@ -136,6 +142,8 @@ func (parser *Parser) parseLetStatement() *ast.LetStatement{
 func (parser *Parser) parseReturnStatement() *ast.ReturnStatement{
 	st := &ast.ReturnStatement{Token: parser.currToken}
 
+	parser.nextToken()
+	st.ReturnValue = parser.parseExpression(LOWEST)
 	for !parser.currTokenIs(token.SEMICOLON){
 		parser.nextToken()
 	}
@@ -309,6 +317,37 @@ func (parser *Parser) parsePrefixExpression() ast.Expression{
 	return exp
 }
 
+func (parser *Parser) parseCallExpression(function ast.Expression) ast.Expression{
+	exp := &ast.CallExpression{Token: parser.currToken, Function: function}
+	exp.Arguments = parser.parseCallArguments()
+	return exp
+}
+
+func (parser *Parser) parseCallArguments() []ast.Expression{
+	args := []ast.Expression{}
+
+	if parser.peekTokenIs(token.CROUNDBR){
+		parser.nextToken()
+		return nil
+	}
+
+	parser.nextToken()
+	args = append(args, parser.parseExpression(LOWEST))
+
+	for parser.peekTokenIs(token.COMMA){
+		parser.nextToken()
+		parser.nextToken()
+		args = append(args, parser.parseExpression(LOWEST))
+	}
+
+
+	if ! parser.checkPeekToken(token.CROUNDBR){
+		return nil
+	}
+
+	return args
+}
+
 func(parser *Parser) parseInfixExpression(left ast.Expression) ast.Expression{
 	exp := &ast.InfixExpression{
 		Token: parser.currToken,
@@ -387,6 +426,7 @@ var precendences = map[token.TokenType] int{
 	token.MINUS: SUM,
 	token.MULTIPLY: PRODUCT,
 	token.DIVIDE: PRODUCT,
+	token.OROUNDBR: CALL,
 }
 
 const (
