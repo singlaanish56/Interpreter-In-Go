@@ -6,6 +6,7 @@ import (
 
 	"io"
 
+	"github.com/singlaanish56/Interpreter-In-Go/evaluation"
 	"github.com/singlaanish56/Interpreter-In-Go/lexer"
 
 	"github.com/singlaanish56/Interpreter-In-Go/parser"
@@ -33,9 +34,12 @@ func Start(in io.Reader,out io.Writer) {
 			printParserErrors(out, parser.Errors())
 			continue
 		}
-
-		io.WriteString(out, program.String())
-		io.WriteString(out,"\n")
+		
+		obj := evaluation.Eval(program)
+		if obj!=nil{
+			io.WriteString(out, obj.Inspect())
+			io.WriteString(out,"\n")	
+		}	
 	}
 }
 
