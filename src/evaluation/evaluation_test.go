@@ -106,10 +106,10 @@ func TestEvalReturnExpression(t *testing.T){
 		input string
 		expected interface{}
 	}{
-		// {"return 10;", 10},
-		// {"return 10; 9;", 10},
-		// {"return 2*5; 9;", 10},
-		// {"9; return 2*5; 9;", 10},
+		{"return 10;", 10},
+		{"return 10; 9;", 10},
+		{"return 2*5; 9;", 10},
+		{"9; return 2*5; 9;", 10},
 		{"if(10){if(9){return 9;}} return 10;", 9},
 	}
 
@@ -123,6 +123,50 @@ func TestEvalReturnExpression(t *testing.T){
 			testIntegerObject(t, eval, int64(integ))
 		}else{
 			testNullObject(t, eval)
+		}
+	}
+}
+
+func TestErrorHandling(t *testing.T){
+	tests := []struct{
+		input string
+		expected string
+	}{
+		{
+			"5 + true",
+			"type mismatch: INTEGER + BOOLEAN",
+		},
+		{
+			"-true",
+			"unknown operator: -BOOLEAN",
+		},
+		{
+			"false + true",
+			"unknown operator: BOOLEAN + BOOLEAN",
+		},
+		{
+			"if(10>1){ true+false;}",
+			"unknown operator: BOOLEAN + BOOLEAN",
+		},
+		{	
+			"if(10){if(9){return true+false;}} return 10;", 
+			"unknown operator: BOOLEAN + BOOLEAN",
+		},
+	}
+	for _,tt := range tests{
+		lexer := lexer.New(tt.input)
+		p := parser.New(lexer)
+		prog := p.ParseProgram()
+		eval := Eval(prog)
+		errObj, ok := eval.(*object.Error)
+		if !ok{
+			t.Errorf("no error object returned , got=%T", eval)
+			continue
+		}
+
+
+		if errObj.Message != tt.expected{
+			t.Errorf("wrong error message, expected=%q, got=%q", tt.expected, errObj.Message)
 		}
 	}
 }
