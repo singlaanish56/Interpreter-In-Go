@@ -17,6 +17,13 @@ func TestEvalIntegerEvaluation(t *testing.T){
 		{"10",10},
 		{"-10",-10},
 		{"-5",-5},
+		{"5-5",0},
+		{"5+5",10},
+		{"-5-5",-10},
+		{"5*5",25},
+		{"5/5",1},
+		{"((6/3)*2)-5",-1},
+		{"((6/3)*2)-(4*(2+3))",-16},
 	}
 
 	for _, tt:= range tests{
@@ -41,6 +48,18 @@ func TestEvalBooleanEvaluation(t *testing.T){
 		{"!!true",true},
 		{"!!false",false},
 		{"!!5",true},
+		{"5==5", true},
+		{"5==6", false},
+		{"5!=10", true},
+		{"5!=5", false},
+		{"(2*(10/5)+3)==((6/2)*6-9)", false},
+		{"1<2", true},
+		{"2<1", false},
+		{"true==false", false},
+		{"true==true", true},
+		{"false==false", true},
+		{"(2<1)==true", false},
+		{"(2<1)==false", true},
 	}
 
 	for _, tt:= range tests{
@@ -52,7 +71,72 @@ func TestEvalBooleanEvaluation(t *testing.T){
 	}
 }
 
+
+func TestEvalIfExpression(t *testing.T){
+	tests :=[]struct{
+		input string
+		expected interface{}
+	}{
+		{"if(true){10}",10},
+		{"if(false){10}",nil},
+		{"if(1){10}",10},
+		{"if(1 < 2){10}",10},
+		{"if(2 > 1){10}",10},
+		{"if(1==1){10}",10},
+		{"if(1!=2){10}",10},
+		{"if(1==2){10}else{5}",5},
+	}
+
+	for _,tt := range tests{
+		lexer := lexer.New(tt.input)
+		p := parser.New(lexer)
+		prog := p.ParseProgram()
+		eval := Eval(prog)
+		integ , ok := tt.expected.(int)
+		if ok{
+			testIntegerObject(t, eval, int64(integ))
+		}else{
+			testNullObject(t, eval)
+		}
+	}
+}
+
+func TestEvalReturnExpression(t *testing.T){
+	tests:=[] struct{
+		input string
+		expected interface{}
+	}{
+		// {"return 10;", 10},
+		// {"return 10; 9;", 10},
+		// {"return 2*5; 9;", 10},
+		// {"9; return 2*5; 9;", 10},
+		{"if(10){if(9){return 9;}} return 10;", 9},
+	}
+
+	for _,tt := range tests{
+		lexer := lexer.New(tt.input)
+		p := parser.New(lexer)
+		prog := p.ParseProgram()
+		eval := Eval(prog)
+		integ , ok := tt.expected.(int)
+		if ok{
+			testIntegerObject(t, eval, int64(integ))
+		}else{
+			testNullObject(t, eval)
+		}
+	}
+}
 //helpers
+
+func testNullObject(t *testing.T, eval object.Object) bool{
+	if eval != NULL{
+		t.Errorf("the object is not null , got=%T", eval)
+		return false
+	}
+
+	return true
+}
+
 
 func testIntegerObject(t *testing.T, eval object.Object, expected int64) bool{
 	result, ok := eval.(*object.Integer)

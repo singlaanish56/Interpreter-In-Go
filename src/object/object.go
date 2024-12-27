@@ -4,8 +4,9 @@ import "fmt"
 
 const (
 	INTEGER_VAL = "INTEGER"
-		BOOLEAN_VAL = "BOOLEAN"
-		NULL_VAL = "NULL"
+	BOOLEAN_VAL = "BOOLEAN"
+	NULL_VAL = "NULL"
+	RETURN_VAL ="RETURN"
 )
 
 type ObjectType string
@@ -33,4 +34,12 @@ type Null struct{}
 
 func (b *Null) Type() ObjectType { return NULL_VAL }
 func (b *Null) Inspect() string { return "null"}
+
+
+type ReturnValue struct{
+	Value Object
+}
+
+func (rv *ReturnValue) Type() ObjectType { return RETURN_VAL }
+func (rv *ReturnValue) Inspect() string { return rv.Value.Inspect()}
 
