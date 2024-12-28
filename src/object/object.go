@@ -1,6 +1,12 @@
 package object
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+	"strings"
+
+	"github.com/singlaanish56/Interpreter-In-Go/ast"
+)
 
 const (
 	INTEGER_VAL = "INTEGER"
@@ -8,6 +14,7 @@ const (
 	NULL_VAL = "NULL"
 	RETURN_VAL ="RETURN"
 	ERROR_OBJ ="ERROR"
+	FUNCTION ="FUNCTION"
 )
 
 type ObjectType string
@@ -52,4 +59,57 @@ func (e *Error) Type() ObjectType { return ERROR_OBJ }
 func (e *Error) Inspect() string { return e.Message}
 
 
+type Environment struct{
+	env map[string]Object
+	outer *Environment
+}
 
+func NewEnv() *Environment{
+	s:= make(map[string]Object)
+	return &Environment{env: s, outer: nil}
+}
+
+func NewEnclosedEnvironment(outer *Environment) *Environment{
+	env := NewEnv()
+	env.outer = outer
+
+	return env
+}
+
+func (e *Environment) Get(name string) (Object, bool){
+	obj, ok := e.env[name]
+	if !ok && e.outer!=nil{
+		obj, ok = e.outer.Get(name)
+	}
+	return obj, ok
+}
+
+func (e *Environment) Set(name string , obj Object) Object{
+	e.env[name] = obj;
+	return obj
+}
+
+
+type Function struct{
+	Params []*ast.Variable
+	Body *ast.BlockStatement
+	Env *Environment	
+}
+
+func (f *Function) Type() ObjectType { return FUNCTION}
+func (f *Function) Inspect() string{
+	var out bytes.Buffer
+
+	params := []string{}
+	for _, p:= range f.Params{
+		params = append(params, p.String())
+	}
+
+	out.WriteString("fn(")
+	out.WriteString(strings.Join(params,","))
+	out.WriteString("){\n")
+	out.WriteString(f.Body.String())
+	out.WriteString("}\n")
+
+	return out.String()
+}

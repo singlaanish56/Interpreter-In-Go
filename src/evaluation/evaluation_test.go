@@ -27,10 +27,7 @@ func TestEvalIntegerEvaluation(t *testing.T){
 	}
 
 	for _, tt:= range tests{
-		lexer := lexer.New(tt.input)
-		p := parser.New(lexer)
-		prog := p.ParseProgram()
-		eval := Eval(prog)
+		eval := testEval(tt.input)
 		testIntegerObject(t, eval, tt.expected)
 	}
 }
@@ -63,10 +60,7 @@ func TestEvalBooleanEvaluation(t *testing.T){
 	}
 
 	for _, tt:= range tests{
-		lexer := lexer.New(tt.input)
-		p := parser.New(lexer)
-		prog := p.ParseProgram()
-		eval := Eval(prog)
+		eval := testEval(tt.input)
 		testBooleanObject(t, eval, tt.expected)
 	}
 }
@@ -88,10 +82,7 @@ func TestEvalIfExpression(t *testing.T){
 	}
 
 	for _,tt := range tests{
-		lexer := lexer.New(tt.input)
-		p := parser.New(lexer)
-		prog := p.ParseProgram()
-		eval := Eval(prog)
+		eval := testEval(tt.input)
 		integ , ok := tt.expected.(int)
 		if ok{
 			testIntegerObject(t, eval, int64(integ))
@@ -114,10 +105,7 @@ func TestEvalReturnExpression(t *testing.T){
 	}
 
 	for _,tt := range tests{
-		lexer := lexer.New(tt.input)
-		p := parser.New(lexer)
-		prog := p.ParseProgram()
-		eval := Eval(prog)
+		eval := testEval(tt.input)
 		integ , ok := tt.expected.(int)
 		if ok{
 			testIntegerObject(t, eval, int64(integ))
@@ -152,12 +140,13 @@ func TestErrorHandling(t *testing.T){
 			"if(10){if(9){return true+false;}} return 10;", 
 			"unknown operator: BOOLEAN + BOOLEAN",
 		},
+		{
+			"foobar",
+			"variable not found: foobar",
+		},
 	}
 	for _,tt := range tests{
-		lexer := lexer.New(tt.input)
-		p := parser.New(lexer)
-		prog := p.ParseProgram()
-		eval := Eval(prog)
+		eval := testEval(tt.input)
 		errObj, ok := eval.(*object.Error)
 		if !ok{
 			t.Errorf("no error object returned , got=%T", eval)
@@ -170,6 +159,70 @@ func TestErrorHandling(t *testing.T){
 		}
 	}
 }
+
+
+func TestEvalLetStatements(t * testing.T){
+	tests:= []struct{
+		input string
+		expected int64
+	}{
+		{"let a=5;a;", 5},
+		{"let a=5*5;a;", 25},
+		{"let a=5; let b= a;b;", 5},
+		{"let a=5;let b = a; let c = b+a;c;", 10},
+	}
+
+	for _, tt:= range tests{
+		eval := testEval(tt.input)
+		testIntegerObject(t, eval, tt.expected)
+	}
+}
+
+
+func TestEvalFunctionObject(t *testing.T){
+	input := "fn(x, y){x+y;};"
+	eval := testEval(input)
+	fn , ok := eval.(*object.Function)
+	if !ok{
+		t.Fatalf("object is not of type function got=%T", eval)
+		return
+	}
+
+	if len(fn.Params) !=2{
+		t.Fatalf("the number of parameters not as expected=2, got=%d", len(fn.Params))
+		return
+	}
+
+	if fn.Params[0].String()!="x" || fn.Params[1].String()!="y"{
+		t.Fatalf("one of the parameters not as expected=x,y got=%s,%s", fn.Params[0].String(), fn.Params[1].String())
+		return
+	}
+
+	if fn.Body.String() != "(x+y)"{
+		t.Fatalf("body not as expected=%s, got=%s","(x+y)", fn.Body.String())
+		return
+	}
+}
+
+func TestEvalFunctionApplication(t *testing.T){
+	tests := []struct{
+		input string
+		expected int64
+	}{
+		{"let identity = fn(x){x;} identity(5);",5},
+		{"let identity = fn(x){return x;} identity(5);",5},
+		{"let double = fn(x){x*2;} double(5);",10},
+		{"let add = fn(x, y){x+y;} add(5, 5);",10},
+		{"let add = fn(x, y){x+y;} add(5+5, add(5,5));",20},
+		{"fn(x){x;}(5)",5},
+	}
+
+	for _, tt := range tests{
+		eval := testEval(tt.input)
+		testIntegerObject(t, eval, tt.expected)
+	}
+}
+
 //helpers
 
 func testNullObject(t *testing.T, eval object.Object) bool{
@@ -210,4 +263,13 @@ func testBooleanObject(t *testing.T, eval object.Object, expected bool) bool{
 	}
 
 	return true
+}
+
+func testEval(input string) object.Object{
+	lexer := lexer.New(input)
+	p := parser.New(lexer)
+	prog := p.ParseProgram()
+	e := object.NewEnv()
+	eval := Eval(prog, e)
+	return eval
 }
