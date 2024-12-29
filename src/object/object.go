@@ -11,10 +11,12 @@ import (
 const (
 	INTEGER_VAL = "INTEGER"
 	BOOLEAN_VAL = "BOOLEAN"
+	STRING_VAL="STRING"
 	NULL_VAL = "NULL"
 	RETURN_VAL ="RETURN"
 	ERROR_OBJ ="ERROR"
 	FUNCTION ="FUNCTION"
+	BUILTIN_OBJ="BUILTIN"
 )
 
 type ObjectType string
@@ -37,6 +39,14 @@ type Boolean struct{
 
 func (b *Boolean) Type() ObjectType { return BOOLEAN_VAL }
 func (b *Boolean) Inspect() string { return fmt.Sprintf("%t",b.Value)}
+
+type String struct {
+	Value string
+}
+
+func (s *String) Type() ObjectType { return STRING_VAL }
+func (s *String) Inspect() string { return fmt.Sprintf("%d",s.Value)}
+
 
 type Null struct{}
 
@@ -113,3 +123,13 @@ func (f *Function) Inspect() string{
 
 	return out.String()
 }
+
+
+type BuiltinFunction func(args ...Object) Object
+
+type Builtin struct{
+	Fn BuiltinFunction
+}
+
+func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ}
+func (b *Builtin) Inspect() string { return "builtin function"}

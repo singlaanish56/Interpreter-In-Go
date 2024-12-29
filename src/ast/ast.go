@@ -152,6 +152,38 @@ func (bl *BooleanLiteral) expressionNode(){}
 func (bl *BooleanLiteral) TokenLiteral() string {return bl.Token.Identifier}
 func (bl *BooleanLiteral) String() string {return bl.Token.Identifier}
 
+type StringLiteral struct{
+	Token token.Token
+	Value string
+}
+
+func (sl *StringLiteral) expressionNode(){}
+func (sl *StringLiteral) TokenLiteral() string {return sl.Token.Identifier}
+func (sl *StringLiteral) String() string {return sl.Token.Identifier}
+
+type ArrayLiteral struct{
+	Token token.Token
+	Elements []Expression
+}
+
+func (al *ArrayLiteral) expressionNode(){}
+func (al *ArrayLiteral) TokenLiteral() string {return al.Token.Identifier}
+func (al *ArrayLiteral) String() string {
+	var out bytes.Buffer
+
+	elements:= []string{}
+	for _,el:= range al.Elements{
+		elements = append(elements, el.String())
+	}
+
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements,","))
+	out.WriteString("]")
+
+	return out.String()
+}
+
+
 type IfExpression struct{
 	Token token.Token
 	Condition Expression

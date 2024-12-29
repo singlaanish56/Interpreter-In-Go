@@ -37,9 +37,11 @@ func New(lx *lexer.Lexer) *Parser{
 	parser.infixParseFnMap = make(map[token.TokenType]infixParseFn)
 	parser.addPrefix(token.VARIABLE, parser.parseVariable)
 	parser.addPrefix(token.NUMBER, parser.parserIntegerLiteral)
+	parser.addPrefix(token.STRING, parser.parseStringExpression)
 	parser.addPrefix(token.EXCLAMATION, parser.parsePrefixExpression)
 	parser.addPrefix(token.MINUS, parser.parsePrefixExpression)
 	parser.addPrefix(token.PLUS, parser.parsePrefixExpression)
+	parser.addPrefix(token.OSQAUREBR, parser.parseArrayExpression)
 
 	parser.addPrefix(token.OROUNDBR, parser.parseGroupedExpression)
 	parser.addPrefix(token.CROUNDBR, parser.parseGroupedExpression)
@@ -190,6 +192,44 @@ func (parser *Parser) parserIntegerLiteral() ast.Expression{
 	return intLiteral
 }
 
+func (parser *Parser) parseStringExpression() ast.Expression{
+	strLiteral := &ast.StringLiteral{Token: parser.currToken, Value: parser.currToken.Identifier}
+	return strLiteral
+}
+
+func (parser *Parser) parseArrayExpression() ast.Expression{
+	arr := &ast.ArrayLiteral{Token: parser.currToken}
+
+	arr.Elements = parser.parseExpressionList(token.CSQUAREBR)
+
+	return arr
+}
+
+func (parser *Parser) parseExpressionList(endToken token.TokenType) []ast.Expression{
+	list := []ast.Expression{}
+
+	if parser.peekTokenIs(endToken){
+		parser.nextToken()
+		return list
+	}
+
+	parser.nextToken()
+	list = append(list, parser.parseExpression(LOWEST))
+
+	for parser.peekTokenIs(token.COMMA){
+		parser.nextToken()
+		parser.nextToken()
+
+		list =append(list, parser.parseExpression(LOWEST))
+	}
+
+	if !parser.checkPeekToken(endToken){
+		return nil
+	}
+
+	return list
+}
+
 func (parser *Parser) parseBooleanExpression() ast.Expression{
 	return &ast.BooleanLiteral{Token: parser.currToken, Value: parser.currTokenIs(token.TRUE)}
 }
@@ -319,33 +359,8 @@ func (parser *Parser) parsePrefixExpression() ast.Expression{
 
 func (parser *Parser) parseCallExpression(function ast.Expression) ast.Expression{
 	exp := &ast.CallExpression{Token: parser.currToken, Function: function}
-	exp.Arguments = parser.parseCallArguments()
+	exp.Arguments = parser.parseExpressionList(token.CROUNDBR)
 	return exp
-}
-
-func (parser *Parser) parseCallArguments() []ast.Expression{
-	args := []ast.Expression{}
-
-	if parser.peekTokenIs(token.CROUNDBR){
-		parser.nextToken()
-		return nil
-	}
-
-	parser.nextToken()
-	args = append(args, parser.parseExpression(LOWEST))
-
-	for parser.peekTokenIs(token.COMMA){
-		parser.nextToken()
-		parser.nextToken()
-		args = append(args, parser.parseExpression(LOWEST))
-	}
-
-
-	if ! parser.checkPeekToken(token.CROUNDBR){
-		return nil
-	}
-
-	return args
 }
 
 func(parser *Parser) parseInfixExpression(left ast.Expression) ast.Expression{

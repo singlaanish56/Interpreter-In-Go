@@ -6,7 +6,6 @@ import (
 
 	"github.com/singlaanish56/Interpreter-In-Go/ast"
 	"github.com/singlaanish56/Interpreter-In-Go/lexer"
-	
 )
 
 func TestLetStatements(t *testing.T){
@@ -146,6 +145,68 @@ func TestIntegerExpression(t *testing.T){
 		t.Errorf("the variable tokenliteral not as expected %s, got %s","5",varr.TokenLiteral())
 	}
 
+}
+
+func TestStringExpression(t *testing.T){
+	tests := []struct{
+		input string
+		expected string
+	}{
+		{`"anish";`,"anish"},
+		{`"this is a string";`,"this is a string"},
+		{`"this is something else 1. 2.3 4.5 ^&$^##&*$#&$&*#$^*&";`,"this is something else 1. 2.3 4.5 ^&$^##&*$#&$&*#$^*&"},
+	}
+
+	for _, tt := range tests{
+		l := lexer.New(tt.input)
+		p := New(l)
+		prog := p.ParseProgram()
+
+		checkForErrors(p, t)
+		if len(prog.Statements) !=1{
+			t.Fatalf("the length of the statement not as expected=1, got=%d", len(prog.Statements))
+			return
+		}
+
+		st, ok := prog.Statements[0].(*ast.ExpressionStatement)
+		if !ok{
+			t.Fatalf("the type of the statement not as expected, got=%T", prog.Statements[0])
+			return
+		}
+
+		str, ok := st.Expression.(*ast.StringLiteral)
+		if !ok{
+			t.Fatalf("the type of literal not as expected=string, got=%T",st.Expression)
+			return 
+		}
+
+		if tt.expected != str.Value{
+			t.Fatalf("the string value not as expected=%s, got=%s",tt.expected, str.Value)
+			return
+		}
+	}
+}
+
+func TestParseArrayLiteral(t *testing.T){
+	input :="[1, 2*2, 3+3]"
+
+	l := lexer.New(input)
+	p := New(l)
+	prog := p.ParseProgram()
+	checkForErrors(p, t)
+
+	array , ok := prog.Statements[0].(*ast.ExpressionStatement).Expression.(*ast.ArrayLiteral)
+	if !ok{
+		t.Fatalf("the type is not array literal , got=%T",prog.Statements[0].(*ast.ExpressionStatement).Expression )
+	}
+
+	if len(array.Elements) != 3{
+		t.Fatalf("the size of the array not as expected=3, got=%d", len(array.Elements))
+	}
+
+	testIntegerLiteral(t, array.Elements[0], 1)
+	testInfix(t, array.Elements[1], 2 , "*", 2)
+	testInfix(t, array.Elements[2], 3 , "+", 3)
 }
 
 func TestPrefixExpression(t *testing.T){

@@ -57,6 +57,11 @@ func TestEvalBooleanEvaluation(t *testing.T){
 		{"false==false", true},
 		{"(2<1)==true", false},
 		{"(2<1)==false", true},
+		{`"are we equal"=="are we equal"`, true},
+		{`"are we equal"=="no we are not"`, false},
+		{`"are we equal"!="no we are not"`, true},
+		{`"are we equal">"no we are not"`, false},
+		{`"are we equal"<"no we are not"`, true},
 	}
 
 	for _, tt:= range tests{
@@ -65,6 +70,22 @@ func TestEvalBooleanEvaluation(t *testing.T){
 	}
 }
 
+func TestEvalStringEvaluation(t *testing.T){
+	tests := []struct{
+		input string
+		expected string
+	}{
+		{`"((6/3)*2)-5"`,"((6/3)*2)-5"},
+		{`"((6/3)*2)-(4*(2+3))"`,"((6/3)*2)-(4*(2+3))"},
+		{`"this is a b ugdjdsljlsfdlkfdkjlhdkjfdjkfdfjkdhafjks string"`,"this is a b ugdjdsljlsfdlkfdkjlhdkjfdjkfdfjkdhafjks string"},
+		{`"this is it"+", is it?"`,"this is it, is it?"},
+	}
+
+	for _, tt:= range tests{
+		eval := testEval(tt.input)
+		testStringObject(t, eval, tt.expected)
+	}
+}
 
 func TestEvalIfExpression(t *testing.T){
 	tests :=[]struct{
@@ -143,6 +164,10 @@ func TestErrorHandling(t *testing.T){
 		{
 			"foobar",
 			"variable not found: foobar",
+		},
+		{
+			`"hello" - "worls"`,
+			"unknown operator: STRING - STRING",
 		},
 	}
 	for _,tt := range tests{
@@ -223,6 +248,39 @@ func TestEvalFunctionApplication(t *testing.T){
 	}
 }
 
+func TestEvalBuiltInFunction(t *testing.T){
+	tests := []struct{
+		input string
+		expected interface{}
+	}{
+		{`len("")`, 0},
+		{`len("four")`, 4},
+		{`len("hello world")`, 11},
+		{`len(1)`, "argument for the len builtin not supported, got INTEGER"},
+	}
+
+	for _, tt := range tests{
+		eval := testEval(tt.input)
+
+		switch expected:= tt.expected.(type){
+		case int:
+			testIntegerObject(t, eval, int64(expected))
+		case string:
+			ee, ok := eval.(*object.Error)
+			if !ok{
+				t.Errorf("object is not of error type, got=%T", eval)
+				continue
+			}
+
+			if ee.Message != expected{
+				t.Errorf("wrong error message , expected=%s, got=%s", expected, ee.Message)
+				continue
+			}
+		}
+	}
+}
+
+
 //helpers
 
 func testNullObject(t *testing.T, eval object.Object) bool{
@@ -249,6 +307,22 @@ func testIntegerObject(t *testing.T, eval object.Object, expected int64) bool{
 
 	return true
 }
+
+func testStringObject(t *testing.T, eval object.Object, expected string) bool{
+	result, ok := eval.(*object.String)
+	if !ok{
+		t.Errorf("object is not string , got=%T", eval)
+		return false
+	}
+
+	if result.Value != expected{
+		t.Errorf("integer values dont match expected=%s , got=%s",expected, result.Value)
+		return false
+	}
+
+	return true
+}
+
 
 func testBooleanObject(t *testing.T, eval object.Object, expected bool) bool{
 	result, ok := eval.(*object.Boolean)
