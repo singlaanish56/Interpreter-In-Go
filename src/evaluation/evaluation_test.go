@@ -169,6 +169,8 @@ func TestErrorHandling(t *testing.T){
 			`"hello" - "worls"`,
 			"unknown operator: STRING - STRING",
 		},
+		{"[1,2,3][3]","array out of bound index, min index=0, max index=2, got=3"},
+		{"[1,2,3][-1]","array out of bound index, min index=0, max index=2, got=-1"},
 	}
 	for _,tt := range tests{
 		eval := testEval(tt.input)
@@ -280,9 +282,55 @@ func TestEvalBuiltInFunction(t *testing.T){
 	}
 }
 
+func TestEvalArrayLiteral(t * testing.T){
+	input :="[1+2, 2, 3*3, 4-4]"
+
+	eval := testEval(input)
+
+	result , ok := eval.(*object.Array)
+	if !ok{
+		t.Fatalf("object is not array, got=%T", eval)
+	}
+
+	if len(result.Elements) != 4{
+		t.Fatalf("the number of elements not as expected=3, got=%d", len(result.Elements))
+	}
+
+	testIntegerObject(t, result.Elements[0], 3)
+	testIntegerObject(t, result.Elements[1], 2)
+	testIntegerObject(t, result.Elements[2], 9)
+	testIntegerObject(t, result.Elements[3], 0)
+}
+
+func TestEvalArrayIndex(t *testing.T){
+	tests := []struct{
+		input string
+		expected interface{}
+	}{
+		{"[1,2,3][0]", 1},
+		{"[1,2,3][1]", 2},
+		{"let arr = [1,2,3]; arr[2];", 3},
+		{"let arr = [1,2,3]; arr[0]+arr[1]+arr[2];", 6},
+	}
+
+	for _, tt := range tests{
+		eval := testEval(tt.input)
+
+		result, ok := tt.expected.(int)
+		if ok{
+			testIntegerObject(t, eval, int64(result))
+		}
+	}
+}
+
+
+
+
+
+
+
 
 //helpers
-
 func testNullObject(t *testing.T, eval object.Object) bool{
 	if eval != NULL{
 		t.Errorf("the object is not null , got=%T", eval)

@@ -326,7 +326,7 @@ func TestOPeratorPrecendenceParsing(t *testing.T){
 		{"(a+b)/c","((a+b)/c)"},
 		{"a + add(b*c) +d", "((a+add((b*c)))+d)"},
 		{"add(a,b,1,2*3,4+5,add(6,7*8))","add(a,b,1,(2*3),(4+5),add(6,(7*8)))"},
-		
+		{"a * [1,2,3,4][b*c]*d","((a*([1,2,3,4][(b*c)]))*d)"},
 	}
 
 	for _, tt:= range tests{
@@ -534,6 +534,40 @@ func TestCallExpressions(t *testing.T){
 	testInfix(t, exp.Arguments[2],4,"+",5)
 }	
 
+func TestParseIndexExpressopn(t *testing.T){
+	input := "arr[1+1]"
+
+	l := lexer.New(input)
+	p := New(l)
+	prog := p.ParseProgram()
+	checkForErrors(p,t)
+	
+	if len(prog.Statements)!=1{
+		t.Errorf("the number of statements not as expected")
+		return 
+	}
+
+	st , ok := prog.Statements[0].(*ast.ExpressionStatement)
+	if !ok{
+		t.Errorf("the expression  type not as expected got=%T", prog.Statements[0])
+		return 
+	}
+
+	exp , ok := st.Expression.(*ast.IndexExpression)
+	if !ok{
+		t.Errorf("the expression  type not as expected got=%T", prog.Statements[0])
+		return
+	}
+
+	if !testIdentifier(t, exp.Left, "arr"){
+		return
+	}
+
+	if !testInfix(t, exp.Index, 1, "+", 1){
+		return
+	}
+
+}
 
 //helpers
 func testIdentifier(t *testing.T, exp ast.Expression, value string)bool{

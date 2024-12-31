@@ -61,7 +61,8 @@ func New(lx *lexer.Lexer) *Parser{
 	parser.addInfix(token.CANGLEDBR, parser.parseInfixExpression)
 	parser.addInfix(token.DOUBLEEQUALTO, parser.parseInfixExpression)
 	parser.addInfix(token.EXCLAMATIONEQUALTO, parser.parseInfixExpression)
-	
+	parser.addInfix(token.OSQAUREBR, parser.parseInfixIndexExpression)
+
 	parser.addInfix(token.OROUNDBR, parser.parseCallExpression)
 	return parser
 }
@@ -357,6 +358,21 @@ func (parser *Parser) parsePrefixExpression() ast.Expression{
 	return exp
 }
 
+func (parser *Parser) parseInfixIndexExpression(left ast.Expression) ast.Expression{
+	indexExp := &ast.IndexExpression{Token : parser.currToken, Left: left}
+
+	parser.nextToken()
+
+	indexExp.Index = parser.parseExpression(LOWEST)
+
+	if !parser.checkPeekToken(token.CSQUAREBR){
+		return nil
+	}
+
+	return indexExp
+}
+
+
 func (parser *Parser) parseCallExpression(function ast.Expression) ast.Expression{
 	exp := &ast.CallExpression{Token: parser.currToken, Function: function}
 	exp.Arguments = parser.parseExpressionList(token.CROUNDBR)
@@ -442,6 +458,7 @@ var precendences = map[token.TokenType] int{
 	token.MULTIPLY: PRODUCT,
 	token.DIVIDE: PRODUCT,
 	token.OROUNDBR: CALL,
+	token.OSQAUREBR: INDEX,
 }
 
 const (
@@ -453,4 +470,5 @@ const (
 	PRODUCT
 	PREFIX
 	CALL
+	INDEX
 )		

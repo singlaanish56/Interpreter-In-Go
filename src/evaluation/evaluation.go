@@ -75,6 +75,26 @@ func Eval(node ast.ASTNode, env *object.Environment) object.Object {
 			return args[0]
 		}
 		return applyFunction(fnc, args)
+	case *ast.ArrayLiteral:
+		eval := evalArguments(node.Elements, env)
+		if len(eval)==1 && isError(eval[0]){
+			return eval[0]
+		}
+
+		return &object.Array{Elements: eval}
+	case *ast.IndexExpression:
+		left := Eval(node.Left, env)
+		if isError(left){
+			return left
+		}
+
+		index:=Eval(node.Index, env)
+		if isError(index){
+			return index
+		}
+
+		return evalIndexExpression(left, index)
+
 	default:
 		return NULL
 	}
@@ -261,6 +281,27 @@ func evalArguments(args []ast.Expression, env *object.Environment) []object.Obje
 	}
 
 	return result
+}
+
+func evalIndexExpression(left, index object.Object) object.Object{
+	switch{
+	case left.Type()==object.ARRAY_OBJ && index.Type()==object.INTEGER_VAL:
+		return evalArrayIndexExpression(left, index)
+	default:
+		return newError("index operator not supported, got =%T", left.Type())
+	}
+}
+
+func evalArrayIndexExpression(left, index object.Object) object.Object{
+	arr := left.(*object.Array)
+	ind := index.(*object.Integer).Value
+
+	max := int64(len(arr.Elements))
+	if ind<0 || ind>=max{
+		return newError("array out of bound index, min index=%d, max index=%d, got=%d",0,max-1, ind)
+	}
+
+	return arr.Elements[ind]
 }
 
 func applyFunction(fnc object.Object, args []object.Object) object.Object {
