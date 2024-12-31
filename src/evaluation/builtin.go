@@ -1,6 +1,8 @@
 package evaluation
 
 import (
+	"fmt"
+
 	"github.com/singlaanish56/Interpreter-In-Go/object"
 )
 
@@ -94,6 +96,15 @@ var builtins = map[string]*object.Builtin{
 			default:
 				return newError("argument for the push_back builtin not supported, got %s", args[0].Type())
 			}
+		},
+	},
+	"print": &object.Builtin{
+		Fn : func(args ...object.Object) object.Object{
+			for _, arg := range args{
+				fmt.Println(arg.Inspect())
+			}
+
+			return NULL
 		},
 	},
 }

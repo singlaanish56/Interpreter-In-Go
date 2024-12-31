@@ -212,14 +212,18 @@ func (parser *Parser) parseExpressionList(endToken token.TokenType) []ast.Expres
 	list := []ast.Expression{}
 
 	if parser.peekTokenIs(endToken){
+
 		parser.nextToken()
 		return list
 	}
 
+
 	parser.nextToken()
+
 	list = append(list, parser.parseExpression(LOWEST))
 
 	for parser.peekTokenIs(token.COMMA){
+
 		parser.nextToken()
 		parser.nextToken()
 

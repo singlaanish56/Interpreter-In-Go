@@ -171,6 +171,7 @@ func TestErrorHandling(t *testing.T){
 		},
 		{"[1,2,3][3]","array out of bound index, min index=0, max index=2, got=3"},
 		{"[1,2,3][-1]","array out of bound index, min index=0, max index=2, got=-1"},
+		{`{"name":"Monkey"}[fn(x){x}];`,"the key is not usable as hashkey , got=FUNCTION"},
 	}
 	for _,tt := range tests{
 		eval := testEval(tt.input)
@@ -329,6 +330,30 @@ func TestEvalArrayIndex(t *testing.T){
 	}
 }
 
+func TestEvalHashIndex(t *testing.T){
+	tests:=[]struct{
+		input string
+		expected interface{}
+	}{
+		{`{"foo":5}["foo"]` ,5},
+		{`{"foo":5}["bar"]` ,nil},
+		{`let key="foo"; {"foo":5}[key];`, 5},
+		{`{}["foo"]`, nil},
+		{`{5:5}[5]`, 5},
+		{`{true:6}[true]`, 6},
+	}
+
+	for _, tt := range tests{
+		eval := testEval(tt.input)
+
+		interge, ok := tt.expected.(int)
+		if ok{
+			testIntegerObject(t, eval, int64(interge))
+		}else{
+			testNullObject(t, eval)
+		}
+	}
+}
 
 func TestHashLiterals(t *testing.T){
 	input := `{
