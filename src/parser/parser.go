@@ -41,10 +41,12 @@ func New(lx *lexer.Lexer) *Parser{
 	parser.addPrefix(token.EXCLAMATION, parser.parsePrefixExpression)
 	parser.addPrefix(token.MINUS, parser.parsePrefixExpression)
 	parser.addPrefix(token.PLUS, parser.parsePrefixExpression)
-	parser.addPrefix(token.OSQAUREBR, parser.parseArrayExpression)
 
+	parser.addPrefix(token.OSQAUREBR, parser.parseArrayExpression)
 	parser.addPrefix(token.OROUNDBR, parser.parseGroupedExpression)
 	parser.addPrefix(token.CROUNDBR, parser.parseGroupedExpression)
+	parser.addPrefix(token.OCURLYBR, parser.parseHashMapExpression)
+
 
 	parser.addPrefix(token.TRUE, parser.parseBooleanExpression)
 	parser.addPrefix(token.FALSE, parser.parseBooleanExpression)
@@ -395,6 +397,39 @@ func(parser *Parser) parseInfixExpression(left ast.Expression) ast.Expression{
 	return exp
 
 }
+
+func(parser *Parser) parseHashMapExpression() ast.Expression{
+
+	hashExp := &ast.HashLiteral{Token: parser.currToken}
+	hashExp.Pairs = make(map[ast.Expression]ast.Expression)
+
+	for !parser.peekTokenIs(token.CCURLYBR){
+		parser.nextToken()
+
+		key:= parser.parseExpression(LOWEST)
+
+		if !parser.checkPeekToken(token.COLON){
+			return nil
+		}
+
+		parser.nextToken()
+		value := parser.parseExpression(LOWEST)
+
+		hashExp.Pairs[key]=value
+
+		if !parser.peekTokenIs(token.CCURLYBR) && !parser.checkPeekToken(token.COMMA){
+			return nil
+		}
+	}
+
+	if !parser.checkPeekToken(token.CCURLYBR){
+		return nil
+	}
+
+
+	return hashExp
+}
+
 //helpers
 func (parser *Parser) checkPeekToken(tokenType token.TokenType) bool{
 	if parser.peekTokenIs(tokenType){

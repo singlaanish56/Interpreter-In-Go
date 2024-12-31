@@ -259,6 +259,12 @@ func TestEvalBuiltInFunction(t *testing.T){
 		{`len("four")`, 4},
 		{`len("hello world")`, 11},
 		{`len(1)`, "argument for the len builtin not supported, got INTEGER"},
+		{`let a= [1,2,4,5,66]; len(a)`,5},
+		{`let a= []; len(a)`,0},
+		{`let a= [1,2,4,5,66]; first(a)`,1},
+		{`let a= [1,2,4,5,66]; last(a)`,66},
+		{`first("str")`,"argument for the first builtin not supported, got STRING"},
+		{`last(1)`,"argument for the last builtin not supported, got INTEGER"},
 	}
 
 	for _, tt := range tests{
@@ -324,7 +330,45 @@ func TestEvalArrayIndex(t *testing.T){
 }
 
 
+func TestHashLiterals(t *testing.T){
+	input := `{
+		"one":10-9,
+		"two":1+1,
+		"thr"+"ee": 6/2,
+		4:4,
+		true:5,
+		false:6
+	
+	}`
 
+	eval := testEval(input)
+	result, ok := eval.(*object.Hash)
+	if !ok{
+		t.Fatalf("the type of eval is not as expected, got=%T", eval)
+	}
+
+	expected := map[object.HashKey]int64{
+		(&object.String{Value:"one"}).HashKey() : 1,
+		(&object.String{Value:"two"}).HashKey() : 2,
+		(&object.String{Value:"three"}).HashKey() : 3,
+		(&object.Integer{Value:4}).HashKey() : 4,
+		(&object.Boolean{Value:true}).HashKey() : 5,
+		(&object.Boolean{Value:false}).HashKey() : 6,
+	}
+
+	if len(result.Pairs) != len(expected){
+		t.Errorf("the length of the map not as expected=%d, got=%d", len(expected), len(result.Pairs))
+	}
+
+	for expectedKey, expectedValue := range expected{
+		pairs, ok := result.Pairs[expectedKey]
+		if !ok{
+			t.Errorf("the mapping value not found, expected=%T", expectedKey)
+		}
+
+		testIntegerObject(t, pairs.Value, expectedValue)
+	}
+}
 
 
 

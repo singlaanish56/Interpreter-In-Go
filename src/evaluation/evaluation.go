@@ -26,6 +26,9 @@ func Eval(node ast.ASTNode, env *object.Environment) object.Object {
 		return evaluateBoolean(node.Value)
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
+	case *ast.HashLiteral:
+		
+		return evalHashLiteral(node, env)
 	case *ast.PrefixExpression:
 		right := Eval(node.RightOperator, env)
 		if isError(right) {
@@ -94,7 +97,6 @@ func Eval(node ast.ASTNode, env *object.Environment) object.Object {
 		}
 
 		return evalIndexExpression(left, index)
-
 	default:
 		return NULL
 	}
@@ -302,6 +304,33 @@ func evalArrayIndexExpression(left, index object.Object) object.Object{
 	}
 
 	return arr.Elements[ind]
+}
+
+func evalHashLiteral(node *ast.HashLiteral, env *object.Environment) object.Object{
+	
+	pairs := make(map[object.HashKey]object.HashPair)
+
+	for key, value := range node.Pairs{
+		keyEval := Eval(key, env)
+		if isError(keyEval){
+			return keyEval
+		}
+
+		hashKey, ishashable := keyEval.(object.Hashable)
+		if !ishashable{
+			return newError("unsuable as a hash map key, expected=integer, string or boolean , got=%s", keyEval.Type())
+		}
+
+		valueEval := Eval(value, env)
+		if isError(valueEval){
+			return valueEval
+		}
+
+		hashedKey := hashKey.HashKey()
+		pairs[hashedKey]=object.HashPair{Key: keyEval, Value: valueEval}
+	}
+
+	return &object.Hash{Pairs: pairs}
 }
 
 func applyFunction(fnc object.Object, args []object.Object) object.Object {

@@ -3,6 +3,7 @@ package object
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"strings"
 
 	"github.com/singlaanish56/Interpreter-In-Go/ast"
@@ -18,7 +19,23 @@ const (
 	FUNCTION ="FUNCTION"
 	BUILTIN_OBJ="BUILTIN"
 	ARRAY_OBJ="ARRAY"
+	HASHPAIR_OBJ="HASHPAIR"
 )
+
+type HashKey struct{
+	Type ObjectType
+	Value uint64
+}
+
+type Hashable interface{
+	HashKey() HashKey
+}
+
+type HashPair struct{
+	Key Object
+	Value Object
+}
+
 
 type ObjectType string
 
@@ -33,6 +50,9 @@ type Integer struct {
 
 func (i *Integer) Type() ObjectType { return INTEGER_VAL }
 func (i *Integer) Inspect() string { return fmt.Sprintf("%d",i.Value)}
+func (i *Integer) HashKey() HashKey{
+	return HashKey{Type: i.Type(), Value: uint64(i.Value)}
+}
 
 type Boolean struct{
 	Value bool
@@ -40,14 +60,26 @@ type Boolean struct{
 
 func (b *Boolean) Type() ObjectType { return BOOLEAN_VAL }
 func (b *Boolean) Inspect() string { return fmt.Sprintf("%t",b.Value)}
+func (b *Boolean) HashKey() HashKey{
+	if b.Value{
+		return HashKey{Type: b.Type(), Value: uint64(1)}
+	}
+
+	return HashKey{Type: b.Type(), Value: uint64(0)}
+}
 
 type String struct {
 	Value string
 }
 
 func (s *String) Type() ObjectType { return STRING_VAL }
-func (s *String) Inspect() string { return fmt.Sprintf("%d",s.Value)}
+func (s *String) Inspect() string { return fmt.Sprintf("%s",s.Value)}
+func (s *String) HashKey() HashKey{
+	h := fnv.New64a()
+	h.Write([]byte(s.Value))
 
+	return HashKey{Type: s.Type(), Value: h.Sum64()}
+}
 type Array struct{
 	Elements []Object
 }
@@ -68,6 +100,26 @@ func (a *Array) Inspect() string {
 	return out.String()
 }
 
+type Hash struct{
+	Pairs map[HashKey]HashPair
+}
+
+
+func (hm *Hash) Type() ObjectType { return HASHPAIR_OBJ }
+func (hm *Hash) Inspect() string {
+	var out bytes.Buffer
+
+	elements :=[]string{}
+	for _, p := range hm.Pairs{
+		elements = append(elements, p.Key.Inspect()+":"+p.Value.Inspect())
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(elements,","))
+	out.WriteString("}")
+
+	return out.String()
+}
 
 type Null struct{}
 

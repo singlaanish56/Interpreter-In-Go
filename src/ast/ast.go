@@ -183,6 +183,27 @@ func (al *ArrayLiteral) String() string {
 	return out.String()
 }
 
+type HashLiteral struct{
+	Token token.Token
+	Pairs map[Expression]Expression
+}
+
+func (hl *HashLiteral) expressionNode(){}
+func (hl *HashLiteral) TokenLiteral() string {return hl.Token.Identifier}
+func (hl *HashLiteral) String() string {
+	var out bytes.Buffer
+
+	elements:= []string{}
+	for k,v:= range hl.Pairs{
+		elements = append(elements, k.String()+":"+v.String())
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(elements,","))
+	out.WriteString("}")
+
+	return out.String()
+}
 
 type IfExpression struct{
 	Token token.Token

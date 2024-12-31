@@ -6,6 +6,7 @@ import (
 
 	"github.com/singlaanish56/Interpreter-In-Go/ast"
 	"github.com/singlaanish56/Interpreter-In-Go/lexer"
+
 )
 
 func TestLetStatements(t *testing.T){
@@ -567,6 +568,54 @@ func TestParseIndexExpressopn(t *testing.T){
 		return
 	}
 
+}
+
+func TestParsingHashLiteral(t *testing.T){
+	input := `{"one":1,"second":2, "third":3}`
+
+	l := lexer.New(input)
+	p := New(l)
+	prog := p.ParseProgram()
+	checkForErrors(p,t)
+	
+	if len(prog.Statements)!=1{
+		t.Errorf("the number of statements not as expected")
+		return 
+	}
+
+	st , ok := prog.Statements[0].(*ast.ExpressionStatement)
+	if !ok{
+		t.Errorf("the expression  type not as expected got=%T", prog.Statements[0])
+		return 
+	}
+
+	hash, ok:=st.Expression.(*ast.HashLiteral)
+	if !ok{
+		t.Errorf("the expression  type not as expected got=%T", st.Expression)
+		return
+	}
+
+	if len(hash.Pairs) != 3{
+		t.Errorf("the number of key value pairs not as expected=3, got=%d", len(hash.Pairs))
+		return
+	}
+
+	expected := map[string]int{
+		"one":1,
+		"second":2,
+		"third":3,
+	}
+
+	for key, value:= range hash.Pairs{
+		literal, ok := key.(*ast.StringLiteral)
+		if !ok{
+			t.Errorf("key is not a string literal, got=%T", literal)
+		}
+
+		expectedValue := expected[literal.String()]
+
+		testIntegerLiteral(t, value, int64(expectedValue))
+	}
 }
 
 //helpers
